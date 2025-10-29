@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
+	"strings"
 
 	db "github.com/franzego/stage02/db/sqlc"
 	"github.com/franzego/stage02/internal"
@@ -70,20 +72,28 @@ func main() {
 
 // buildDSN creates Railway-compatible connection string
 func buildDSN() string {
-	// Railway provides MYSQL_URL directly
 	if mysqlURL := os.Getenv("MYSQL_URL"); mysqlURL != "" {
-		return mysqlURL
+		u, err := url.Parse(mysqlURL)
+		if err != nil {
+			log.Fatalf("Invalid MYSQL_URL: %v", err)
+		}
+
+		user := u.User.Username()
+		password, _ := u.User.Password()
+		host := u.Host
+		dbName := strings.TrimPrefix(u.Path, "/")
+
+		return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", user, password, host, dbName)
 	}
 
-	// Fallback: build from individual variables
+	// fallback
 	user := getEnv("MYSQLUSER", os.Getenv("DB_USER"))
 	password := getEnv("MYSQLPASSWORD", os.Getenv("DB_PASSWORD"))
 	host := getEnv("MYSQLHOST", os.Getenv("DB_HOST"))
 	port := getEnv("MYSQLPORT", os.Getenv("DB_PORT"))
 	database := getEnv("MYSQLDATABASE", os.Getenv("DB_NAME"))
 
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-		user, password, host, port, database)
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, password, host, port, database)
 }
 
 // getEnv gets env variable with fallback

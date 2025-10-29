@@ -2,10 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 
 	db "github.com/franzego/stage02/db/sqlc"
 	"github.com/franzego/stage02/internal"
@@ -15,16 +14,13 @@ import (
 )
 
 func main() {
-
-	// Load environment variables
+	// Load .env only in local development
 	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: Error loading .env file")
+		log.Println("No .env file found (this is normal on Railway)")
 	}
 
-	// Build database connection string
-	dsn := os.Getenv("DB_USER") + ":" + os.Getenv("DB_PASSWORD") +
-		"@tcp(" + os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT") +
-		")/" + os.Getenv("DB_NAME") + "?parseTime=true"
+	// Build DSN (Railway-compatible)
+	dsn := buildDSN()
 
 	// Connect to database
 	dbconn, err := sql.Open("mysql", dsn)
@@ -33,54 +29,68 @@ func main() {
 	}
 	defer dbconn.Close()
 
-	// Test the connection
+	// Test connection
 	if err := dbconn.Ping(); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
-	log.Println("Database connection established")
+	log.Println("✓ Database connected")
 
-	// Initialize SQLC queries
+	// Initialize queries
 	queries := db.New(dbconn)
 	handle := internal.NewCountryHandler(queries)
 
-	// Setup Gin router
+	// Setup Gin
 	r := gin.Default()
-	// routes
+
+	// Routes
 	r.POST("/countries/refresh", handle.RefreshCountries)
 	r.GET("/countries", handle.GetAllCountries)
 	r.GET("/countries/:name", handle.GetCountryName)
 	r.DELETE("/countries/:name", handle.DeleteCountryName)
 	r.GET("/status", handle.GetStatus)
 	r.GET("/countries/image", handle.GetImage)
-
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
+		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	// ensure cache dir exists at startup
-	cacheDir := os.Getenv("CACHE_DIR")
-	if cacheDir == "" {
-		cacheDir = "cache"
-	}
+	// Ensure cache directory exists
+	cacheDir := getEnv("CACHE_DIR", "cache")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		log.Fatalf("Failed to create cache dir: %v", err)
 	}
 
-	go func() {
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-		}
-		if err := r.Run("0.0.0.0:" + port); err != nil {
-			log.Fatalf("Server failed to start: %v", err)
-		}
-	}()
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
+	// Start server
+	port := getEnv("PORT", "8080")
+	log.Printf("🚀 Server starting on port %s", port)
 
-	log.Println("Shutting down gracefully...")
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
+}
+
+// buildDSN creates Railway-compatible connection string
+func buildDSN() string {
+	// Railway provides MYSQL_URL directly
+	if mysqlURL := os.Getenv("MYSQL_URL"); mysqlURL != "" {
+		return mysqlURL
+	}
+
+	// Fallback: build from individual variables
+	user := getEnv("MYSQLUSER", os.Getenv("DB_USER"))
+	password := getEnv("MYSQLPASSWORD", os.Getenv("DB_PASSWORD"))
+	host := getEnv("MYSQLHOST", os.Getenv("DB_HOST"))
+	port := getEnv("MYSQLPORT", os.Getenv("DB_PORT"))
+	database := getEnv("MYSQLDATABASE", os.Getenv("DB_NAME"))
+
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+		user, password, host, port, database)
+}
+
+// getEnv gets env variable with fallback
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 
 }

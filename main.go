@@ -8,6 +8,7 @@ import (
 
 	db "github.com/franzego/stage02/db/sqlc"
 	"github.com/franzego/stage02/internal"
+	"github.com/franzego/stage02/internal/database"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -33,6 +34,10 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 	log.Println("✓ Database connected")
+
+	if err := database.RunMigrations(dbconn); err != nil {
+		log.Fatalf("❌ Migration failed: %v", err)
+	}
 
 	// Initialize queries
 	queries := db.New(dbconn)

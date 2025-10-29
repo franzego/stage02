@@ -15,37 +15,27 @@ import (
 )
 
 func main() {
-	// Load .env only in local development
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found (this is normal on Railway)")
 	}
-
 	dsn := buildDSN()
-
-	// Connect to database
 	dbconn, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer dbconn.Close()
-
-	// Test connection
 	if err := dbconn.Ping(); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 	log.Println("✓ Database connected")
 
 	if err := database.RunMigrations(dbconn); err != nil {
-		log.Fatalf("❌ Migration failed: %v", err)
+		log.Fatalf("Migration failed: %v", err)
 	}
-
 	// Initialize queries
 	queries := db.New(dbconn)
 	handle := internal.NewCountryHandler(queries)
-
-	// Setup Gin
 	r := gin.Default()
-
 	// Routes
 	r.POST("/countries/refresh", handle.RefreshCountries)
 	r.GET("/countries", handle.GetAllCountries)
@@ -56,16 +46,12 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-
-	// Ensure cache directory exists
 	cacheDir := getEnv("CACHE_DIR", "cache")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		log.Fatalf("Failed to create cache dir: %v", err)
 	}
-
-	// Start server
 	port := getEnv("PORT", "8080")
-	log.Printf("🚀 Server starting on port %s", port)
+	log.Printf("Server starting on port %s", port)
 
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Server failed: %v", err)
@@ -74,7 +60,6 @@ func main() {
 
 // buildDSN creates Railway-compatible connection string
 func buildDSN() string {
-	// Railway provides MYSQL_URL directly
 	if mysqlURL := os.Getenv("MYSQL_URL"); mysqlURL != "" {
 		return mysqlURL
 	}
@@ -91,6 +76,7 @@ func buildDSN() string {
 }
 
 // getEnv gets env variable with fallback
+// just iincase
 func getEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

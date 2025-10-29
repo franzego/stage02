@@ -1,0 +1,19 @@
+nohup: ignoring input
+2025/10/29 00:32:34 Database connection established
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] POST   /countries/refresh        --> github.com/franzego/stage02/internal.(*CountryHandler).RefreshCountries-fm (3 handlers)
+[GIN-debug] GET    /countries                --> github.com/franzego/stage02/internal.(*CountryHandler).GetAllCountries-fm (3 handlers)
+[GIN-debug] GET    /countries/:name          --> github.com/franzego/stage02/internal.(*CountryHandler).GetCountryName-fm (3 handlers)
+[GIN-debug] DELETE /countries/:name          --> github.com/franzego/stage02/internal.(*CountryHandler).DeleteCountryName-fm (3 handlers)
+[GIN-debug] GET    /status                   --> github.com/franzego/stage02/internal.(*CountryHandler).GetStatus-fm (3 handlers)
+[GIN-debug] GET    /countries/image          --> github.com/franzego/stage02/internal.(*CountryHandler).GetImage-fm (3 handlers)
+[GIN-debug] GET    /ping                     --> main.main.func1 (3 handlers)
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on 0.0.0.0:8080
+signal: killed

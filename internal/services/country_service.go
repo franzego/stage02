@@ -86,22 +86,25 @@ func (c *CountryService) DeleteCountryByName(name string) error {
 
 // function to refresh countries
 func (c *CountryService) RefreshCountries() error {
+	fmt.Println("Starting country refresh...")
 	country, err := c.externalapi.FetchAllCountries()
 	if err != nil {
+		fmt.Printf("Error fetching countries: %v\n", err)
 		return fmt.Errorf("external data source unavailable: %w", err)
 	}
+	fmt.Printf("Successfully fetched %d countries\n", len(country))
 
+	fmt.Println("Fetching exchange rates...")
 	rates, err := c.externalapi.FetchExchangeRate()
 	if err != nil {
+		fmt.Printf("Error fetching exchange rates: %v\n", err)
 		return fmt.Errorf("external rates source unavailable: %w", err)
 	}
+	fmt.Printf("Successfully fetched exchange rates for %d currencies\n", len(rates))
 
 	ctx := context.Background()
 	for _, count := range country {
 		processed := c.processCountry(count, rates)
-		if err := c.upsertCountry(ctx, processed); err != nil {
-			return fmt.Errorf("failed to upsert country %s: %w", processed.Name, err)
-		}
 		if err := c.upsertCountry(ctx, processed); err != nil {
 			fmt.Printf("Failed to upsert country %s: %v\n", processed.Name, err)
 			continue

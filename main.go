@@ -19,7 +19,6 @@ func main() {
 		log.Println("No .env file found (this is normal on Railway)")
 	}
 
-	// Build DSN (Railway-compatible)
 	dsn := buildDSN()
 
 	// Connect to database
